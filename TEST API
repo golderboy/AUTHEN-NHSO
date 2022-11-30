@@ -1,0 +1,107 @@
+<?php
+header('Content-Type: text/html; charset=tis-620');
+?>
+<?php
+$db_config = array(
+    "host" => "localhost", // IP ฐานข้อมูลโปรแกรม ใช้ server เดียวกับ Hosxp
+    "dbname" => "hos", // ฐานข้อมูลโปรแกรม nhso_authen
+    "user" => "sa", // กำหนดชื่อ user
+    "pass" => "sa", // กำหนดรหัสผ่าน
+    "charset" => "Tis620", // กำหนด charset
+);
+$objCon = @new mysqli($db_config["host"], $db_config["user"], $db_config["pass"], $db_config["dbname"]);
+
+if (mysqli_connect_error()) {
+    die('Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error());
+    exit;
+}
+
+$objCon->set_charset("Tis620");
+
+//การตั้งค่า
+$hospcode ='11207';//ตั้งค่า HOSPCODE
+$ip_service =  'http://localhost:8189';//ตั้งค่า IPเครื่องที่มี secureagent สปสช.
+$date = date("Y-m-d"); //กำหนดวันที่ปัจจุบัน
+////////////
+
+$sql = 'select o.vn,p.cid,o.vstdate,k.department 
+from ovst o
+INNER JOIN patient p ON p.hn = o.hn
+left join kskdepartment k on o.main_dep = k.depcode 
+where o.vstdate = CURDATE() 
+limit 100';
+$query = mysqli_query($objCon, $sql) ;
+
+
+$rec = 0; //นับจำนวนนำเข้า
+            echo '
+                    <div class="table-responsive">
+                        <table class="table table-hover" border="1" width="100%">
+                            <thead>
+                                <tr>
+                                    <th>VN</th>
+                                    <th>CID</th>
+                                    <th>VSTDATE</th>
+                                    <th>DEPARTMENT</th>
+                                    <th>AUTHEN CODE</th>
+                                    <th>AUTHEN TYPE</th>
+                                    <th>AUTHEN DATE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                ';
+      
+        while ($result = mysqli_fetch_array($query, MYSQLI_ASSOC)) {
+            $cid = $result['cid'];//เก็บข้อมูลตัวแปร cid
+            $secureagent = $ip_service; //ip secureagent เครื่องที่เปิดตลอดเวลา
+            $url = $secureagent."/api/nhso-service/latest-authen-code/$cid"; //api secureagent 
+
+            $claimCode ='';
+            $claimType = '';
+            $claimDateTime= '';
+
+            $curl = curl_init($url);
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            $resp = curl_exec($curl);
+            curl_close($curl);
+            $obj = json_decode($resp);//แปลงข้อมูลเป็น JSON
+            //echo $obj->claimCode.'<hr>';
+                if($obj->hcode = $hospcode && !empty($obj->claimDateTime)){
+                    $chkdate = empty($obj->claimDateTime) ? '' : $obj->claimDateTime;
+                    $getdate = substr($chkdate,0,10);
+                    if($getdate == $date){
+                        $claimCode = $obj->claimCode;
+                        $claimType = $obj->claimType;
+                        $claimDateTime= $obj->claimDateTime;
+                    }
+                }
+                    echo '
+                            
+                                <tr>
+                                    <td>'.$result['vn'].'</td>
+                                    <td>'.$result['cid'].'</td>
+                                    <td>'.$result['vstdate'].'</td>
+                                    <td>'.$result['department'].'</td>
+                                    <td>'.$claimCode.'</td>
+                                    <td>'.$claimType.'</td>
+                                    <td>'.$claimDateTime.'</td>
+                                </tr>
+                            
+                    ';
+                    
+                  
+                
+          
+
+            $rec++;
+        }
+echo '
+</tbody>
+</table>
+</div>
+';
+
+?>
