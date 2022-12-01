@@ -4,7 +4,7 @@ header('Content-Type: text/html; charset=tis-620');
 <?php
 $db_config = array(
     "host" => "localhost", // IP ฐานข้อมูลโปรแกรม ใช้ server เดียวกับ Hosxp
-    "dbname" => "hos", // ฐานข้อมูลโปรแกรม nhso_authen
+    "dbname" => "hos", // ฐานข้อมูลโปรแกรม Hosxp
     "user" => "sa", // กำหนดชื่อ user
     "pass" => "sa", // กำหนดรหัสผ่าน
     "charset" => "Tis620", // กำหนด charset
